@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Perfumes | Gestión, Inventario y Cotizador</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Sistema interno de gestión de inventario y cotizador de Aura Perfumes">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d97706%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2718%27 font-family=%27sans-serif%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3EA%3C/text%3E%3C/svg%3E">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amberCustom: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- LOGIN -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
+        <form id="login-form" onsubmit="handleLogin(event)" class="bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl space-y-5">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 mx-auto rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg">
+                    <span class="text-white font-bold text-xl">A</span>
+                </div>
+                <h2 class="font-bold text-xl text-slate-900 tracking-wide">AURA PERFUMES</h2>
+                <p class="text-xs text-slate-500">Inicia sesión para continuar</p>
+            </div>
+            <div>
+                <label for="login-user" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Usuario</label>
+                <input type="text" id="login-user" autocomplete="username" autocapitalize="none" autocorrect="off" maxlength="40" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+            <div>
+                <label for="login-pass" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contraseña</label>
+                <input type="password" id="login-pass" autocomplete="current-password" maxlength="100" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+            <p id="login-error" role="alert" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></p>
+            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-amber-600/30 transition-all">Entrar</button>
+        </form>
+    </div>
+    <script>
+        try { if (sessionStorage.getItem('aura_auth') === '1') document.getElementById('login-overlay').classList.add('hidden'); } catch (e) {}
+    </script>
+
+    <!-- Header / Encabezado -->
+    <header class="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-900/20">
+                    <span class="text-white font-bold text-lg">A</span>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide">AURA PERFUMES</h1>
+                    <p class="text-xs text-amber-400 font-medium">Gestión, Inventario y Cotizador de Proveedores</p>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Versión de demostración</span>
+            </div>
+            <button onclick="logout()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg transition-colors">Cerrar sesión</button>
+        </div>
+    </header>
+
+    <!-- Navegación por Pestañas -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-8 overflow-x-auto">
+            <button onclick="switchTab('production')" id="tab-btn-production" class="py-4 px-1 border-b-2 border-amber-600 font-semibold text-sm text-amber-600 whitespace-nowrap flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                <span>Nueva Producción</span>
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-slate-500 hover:text-slate-700 whitespace-nowrap flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                <span>Inventario y Cotizaciones</span>
+            </button>
+            <button onclick="switchTab('recipes')" id="tab-btn-recipes" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-slate-500 hover:text-slate-700 whitespace-nowrap flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                <span>Catálogo de Recetas</span>
+            </button>
+            <button onclick="switchTab('history')" id="tab-btn-history" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-slate-500 hover:text-slate-700 whitespace-nowrap flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Historial de Lotes</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- PESTAÑA 1: PRODUCCIÓN -->
+        <section id="tab-production" class="space-y-6">
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight">Panel de Producción y Descuento en Vivo</h2>
+                    <p class="text-slate-300 text-sm mt-1">Selecciona una fragancia y la cantidad a elaborar. El sistema calculará y descontará los ingredientes proporcionalmente.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Formulario -->
+                <div class="lg:col-span-1 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-100 pb-3">Configurar Lote</h3>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Fragancia / Receta</label>
+                        <select id="prod-fragrance" onchange="updateProductionPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Cantidad de Perfumes a Producir</label>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="adjustQuantity(-1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center text-lg transition-colors">-</button>
+                            <input type="number" id="prod-quantity" value="2" min="1" max="1000" oninput="updateProductionPreview()" class="w-full text-center bg-slate-50 border border-slate-300 rounded-xl py-2.5 text-lg font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <button onclick="adjustQuantity(1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center text-lg transition-colors">+</button>
+                        </div>
+                    </div>
+
+                    <div id="stock-alert-container"></div>
+
+                    <button id="btn-execute-batch" onclick="executeBatch()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Confirmar y Descontar Inventario</span>
+                    </button>
+                </div>
+
+                <!-- Desglose de Producción -->
+                <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-900 text-lg">Desglose de Ingredientes Requeridos</h3>
+                        <span id="preview-total-badge" class="bg-amber-50 text-amber-800 text-xs font-bold px-3 py-1 rounded-full border border-amber-200"></span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider">
+                                <tr>
+                                    <th class="py-3 px-4 rounded-l-lg">Ingrediente</th>
+                                    <th class="py-3 px-4">Por Unidad</th>
+                                    <th class="py-3 px-4">Total Requerido</th>
+                                    <th class="py-3 px-4">Stock Actual</th>
+                                    <th class="py-3 px-4 rounded-r-lg">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-ingredients-list" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 2: INVENTARIO CON FAMILIA OLFATIVA Y COTIZADOR -->
+        <section id="tab-inventory" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200"><p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Insumos registrados</p><p id="stat-total" class="text-3xl font-bold text-slate-900 mt-1">0</p></div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200"><p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Con stock bajo</p><p id="stat-low" class="text-3xl font-bold text-rose-600 mt-1">0</p></div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200"><p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Cotizaciones guardadas</p><p id="stat-quotes" class="text-3xl font-bold text-amber-700 mt-1">0</p></div>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Inventario y Comparador de Precios</h2>
+                    <p class="text-slate-500 text-sm mt-0.5">Gestión por Familia Olfativa, suma de stock e historial de cotizaciones por proveedor.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openRestockModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm flex items-center space-x-2 shadow-md transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        <span>Registrar Entrada / Reabastecer</span>
+                    </button>
+                    <button onclick="openNewIngredientModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-xl text-sm flex items-center space-x-2 shadow-md transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>Nuevo Ingrediente / Insumo</span>
+                    </button>
+                </div>
+            </div>
+
+            <input type="search" id="inv-search" oninput="renderInventoryTable()" maxlength="60" placeholder="Buscar por ingrediente o familia olfativa…" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                            <tr>
+                                <th class="py-4 px-6">Ingrediente / Insumo</th>
+                                <th class="py-4 px-6">Familia Olfativa</th>
+                                <th class="py-4 px-6">Stock Disponible</th>
+                                <th class="py-4 px-6">Mejor Precio Encontrado</th>
+                                <th class="py-4 px-6 text-right">Acciones de Stock y Cotización</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 3: RECETAS -->
+        <section id="tab-recipes" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Catálogo de Fragancias y Fórmulas Maestras</h2>
+                    <p class="text-slate-500 text-sm mt-0.5">Recetas base por cada perfume producido.</p>
+                </div>
+                <button onclick="openRecipeModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-xl text-sm shadow-md transition-all">＋ Nueva Receta</button>
+            </div>
+            <div id="recipes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </section>
+
+        <!-- PESTAÑA 4: HISTORIAL -->
+        <section id="tab-history" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-2xl font-bold text-slate-900">Bitácora de Lotes Producidos</h2>
+                <p class="text-slate-500 text-sm mt-0.5">Registro histórico de producciones con descuento de stock.</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                            <tr>
+                                <th class="py-4 px-6">ID Lote</th>
+                                <th class="py-4 px-6">Fecha y Hora</th>
+                                <th class="py-4 px-6">Fragancia</th>
+                                <th class="py-4 px-6">Cantidad</th>
+                                <th class="py-4 px-6">Insumos Descontados</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: REABASTECER STOCK -->
+    <div id="restock-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900">Añadir Stock al Inventario</h3>
+                <button onclick="closeRestockModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Ingrediente a Reabastecer</label>
+                    <select id="restock-item-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Cantidad a Sumar</label>
+                    <input type="number" id="restock-amount" value="100" min="0.01" step="any" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+            </div>
+            <div class="flex space-x-3 pt-3 border-t border-slate-100">
+                <button onclick="closeRestockModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-sm transition-colors">Cancelar</button>
+                <button onclick="confirmRestock()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-md transition-all">Sumar al Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: AGREGAR NUEVO INGREDIENTE -->
+    <div id="new-ingredient-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900">Registrar Nuevo Ingrediente</h3>
+                <button onclick="closeNewIngredientModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre del Ingrediente / Insumo</label>
+                    <input type="text" id="new-ing-name" maxlength="80" placeholder="Ej: Esencia de Bergamota" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Familia Olfativa</label>
+                        <select id="new-ing-family" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <option value="Amaderada">Amaderada</option>
+                            <option value="Cítrica">Cítrica</option>
+                            <option value="Floral">Floral</option>
+                            <option value="Oriental / Ámbar">Oriental / Ámbar</option>
+                            <option value="Gourmand / Dulce">Gourmand / Dulce</option>
+                            <option value="Herbal / Verde">Herbal / Verde</option>
+                            <option value="Especiada">Especiada</option>
+                            <option value="Solvente / Base">Solvente / Base</option>
+                            <option value="Empaque / Frasco">Empaque / Frasco</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Unidad de Medida</label>
+                        <select id="new-ing-unit" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="gr">Gramos (gr)</option>
+                            <option value="pzs">Piezas (pzs)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Stock Inicial</label>
+                        <input type="number" id="new-ing-stock" min="0" step="any" value="500" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Stock Mínimo (Alerta)</label>
+                        <input type="number" id="new-ing-min" min="0" step="any" value="100" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+            <div class="flex space-x-3 pt-3 border-t border-slate-100">
+                <button onclick="closeNewIngredientModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
+                <button onclick="saveNewIngredient()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-md">Guardar Ingrediente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVA RECETA -->
+    <div id="recipe-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900">Nueva Receta / Fórmula</h3>
+                <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+            <input type="text" id="recipe-name" maxlength="80" placeholder="Nombre de la fragancia" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <input type="text" id="recipe-desc" maxlength="200" placeholder="Descripción breve (opcional)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <div>
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Ingredientes por cada 1 perfume</h4>
+                <div id="recipe-rows" class="space-y-2"></div>
+                <button type="button" onclick="addRecipeRow()" class="mt-3 text-xs font-semibold text-amber-700 hover:text-amber-900">＋ Agregar ingrediente</button>
+            </div>
+            <div class="flex space-x-3 pt-3 border-t border-slate-100">
+                <button onclick="closeRecipeModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
+                <button onclick="saveRecipe()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-md">Guardar Receta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: COTIZADOR / COMPARADOR DE PRECIOS -->
+    <div id="quotes-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-900" id="quote-modal-title">Cotizaciones de Insumo</h3>
+                    <p class="text-xs text-slate-500">Compara los precios encontrados en diferentes páginas web de proveedores.</p>
+                </div>
+                <button onclick="closeQuotesModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+
+            <!-- Formulario de Cotización -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Añadir nueva cotización / página</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="quote-site-name" maxlength="80" placeholder="Página / Proveedor" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <input type="number" id="quote-price" min="0" step="any" placeholder="Precio ($ MXN)" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <input type="text" id="quote-url" maxlength="300" placeholder="Enlace web (Opcional)" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <button onclick="addQuoteToCurrentIngredient()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2 rounded-lg text-xs shadow-sm">Guardar Cotización</button>
+            </div>
+
+            <!-- Tabla de Cotizaciones -->
+            <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 text-slate-700 uppercase font-bold sticky top-0">
+                        <tr>
+                            <th class="py-2.5 px-4">Página / Proveedor</th>
+                            <th class="py-2.5 px-4">Precio Registrado</th>
+                            <th class="py-2.5 px-4">Enlace</th>
+                            <th class="py-2.5 px-4">Comparativa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quotes-table-body" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeQuotesModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-5 py-2 rounded-xl text-xs">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast de Notificación -->
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 transform translate-y-24 opacity-0 transition-all duration-300 z-50 border border-slate-800">
+        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span id="toast-message" class="text-sm font-medium">Operación exitosa</span>
+    </div>
+
+    <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-8 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+        <span>Prototipo: los datos se guardan solo en este navegador/dispositivo.</span>
+        <button onclick="resetData()" class="underline hover:text-slate-600">Restablecer datos de demostración</button>
+    </footer>
+
+    <!-- Lógica JavaScript -->
+    <script>
+        let inventory = [
+            { id: 'ing_1', name: 'Esencia de Sándalo y Cedro', family: 'Amaderada', stock: 1200, unit: 'ml', minStock: 200, quotes: [{ site: 'EsenciasyQuimicos.com', price: 450, url: 'https://esencias.com' }, { site: 'AromasPro.mx', price: 380, url: 'https://aromaspro.mx' }] },
+            { id: 'ing_2', name: 'Extracto de Rosa Damascena', family: 'Floral', stock: 850, unit: 'ml', minStock: 150, quotes: [{ site: 'PerfumeSupply.com', price: 620, url: '' }, { site: 'AromasPro.mx', price: 590, url: '' }] },
+            { id: 'ing_3', name: 'Alcohol Perfumier 96°', family: 'Solvente / Base', stock: 5000, unit: 'ml', minStock: 1000, quotes: [{ site: 'DrogueriaCentral.mx', price: 120, url: '' }] },
+            { id: 'ing_4', name: 'Frasco de Vidrio Ámbar 100ml', family: 'Empaque / Frasco', stock: 45, unit: 'pzs', minStock: 20, quotes: [{ site: 'EnvasesVidrio.mx', price: 18, url: '' }, { site: 'MercadoLibre', price: 22, url: '' }] },
+            { id: 'ing_5', name: 'Esencia de Bergamota', family: 'Cítrica', stock: 600, unit: 'ml', minStock: 150, quotes: [{ site: 'AromasPro.mx', price: 410, url: '' }, { site: 'PerfumeSupply.com', price: 395, url: '' }] },
+            { id: 'ing_6', name: 'Vainilla Absoluta', family: 'Gourmand / Dulce', stock: 90, unit: 'ml', minStock: 100, quotes: [{ site: 'EsenciasyQuimicos.com', price: 780, url: '' }] },
+            { id: 'ing_7', name: 'Ámbar Sintético', family: 'Oriental / Ámbar', stock: 700, unit: 'ml', minStock: 150, quotes: [{ site: 'AromasPro.mx', price: 520, url: '' }, { site: 'PerfumeSupply.com', price: 545, url: '' }] },
+            { id: 'ing_8', name: 'Atomizador Dorado', family: 'Empaque / Frasco', stock: 80, unit: 'pzs', minStock: 30, quotes: [{ site: 'EnvasesVidrio.mx', price: 9, url: '' }] }
+        ];
+
+        let recipes = [
+            { id: 'rec_1', name: 'Fragancia Mística (Edición Madera)', description: 'Perfume amaderado profundo con notas de sándalo y cedro.', ingredients: [{ ingredientId: 'ing_1', amountPerUnit: 20 }, { ingredientId: 'ing_2', amountPerUnit: 25 }, { ingredientId: 'ing_3', amountPerUnit: 70 }, { ingredientId: 'ing_4', amountPerUnit: 1 }] },
+            { id: 'rec_2', name: 'Aura Cítrica (Edición Verano)', description: 'Fresca y luminosa, con bergamota y un fondo suave de rosa.', ingredients: [{ ingredientId: 'ing_5', amountPerUnit: 25 }, { ingredientId: 'ing_2', amountPerUnit: 8 }, { ingredientId: 'ing_3', amountPerUnit: 67 }, { ingredientId: 'ing_4', amountPerUnit: 1 }, { ingredientId: 'ing_8', amountPerUnit: 1 }] },
+            { id: 'rec_3', name: 'Noche Oriental', description: 'Ámbar cálido y vainilla con un toque amaderado.', ingredients: [{ ingredientId: 'ing_7', amountPerUnit: 30 }, { ingredientId: 'ing_6', amountPerUnit: 15 }, { ingredientId: 'ing_1', amountPerUnit: 10 }, { ingredientId: 'ing_3', amountPerUnit: 45 }, { ingredientId: 'ing_4', amountPerUnit: 1 }, { ingredientId: 'ing_8', amountPerUnit: 1 }] }
+        ];
+
+        let batchHistory = [
+            { id: 'LOT-1001', date: '2026-10-28 16:30', fragranceName: 'Fragancia Mística (Edición Madera)', quantity: 2, summary: 'Esencia Sándalo: -40ml, Extracto Rosa: -50ml, Alcohol: -140ml, Frasco: -2pzs' },
+            { id: 'LOT-1002', date: '2026-10-30 11:15', fragranceName: 'Aura Cítrica (Edición Verano)', quantity: 4, summary: 'Esencia Bergamota: -100ml, Extracto Rosa: -32ml, Alcohol: -268ml, Frasco: -4pzs, Atomizador: -4pzs' },
+            { id: 'LOT-1003', date: '2026-11-02 09:40', fragranceName: 'Noche Oriental', quantity: 3, summary: 'Ámbar: -90ml, Vainilla: -45ml, Esencia Sándalo: -30ml, Alcohol: -135ml, Frasco: -3pzs, Atomizador: -3pzs' }
+        ];
+
+        let currentActiveIngId = null;
+
+        // ---- Login (control de acceso del lado del cliente) ----
+        const AUTH_HASH = 'cfe9a5699cec20285ce15d263cc0dbcde941ca83738b1aa9658e0ef15591fb8e';
+        let loginFails = 0, loginLockUntil = 0;
+        async function sha256(t) {
+            const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+            return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        async function handleLogin(e) {
+            e.preventDefault();
+            const err = document.getElementById('login-error');
+            const showErr = m => { err.textContent = m; err.classList.remove('hidden'); };
+            if (Date.now() < loginLockUntil) {
+                showErr(`Demasiados intentos. Espera ${Math.ceil((loginLockUntil - Date.now()) / 1000)} s.`);
+                return;
+            }
+            const u = document.getElementById('login-user').value.trim().toLowerCase();
+            const pw = document.getElementById('login-pass').value;
+            let ok;
+            if (window.crypto && crypto.subtle) ok = (await sha256(u + '\n' + pw)) === AUTH_HASH;
+            else ok = (u === 'charly' && pw === '123456');
+            if (ok) {
+                try { sessionStorage.setItem('aura_auth', '1'); } catch (x) {}
+                loginFails = 0;
+                err.classList.add('hidden');
+                document.getElementById('login-pass').value = '';
+                document.getElementById('login-overlay').classList.add('hidden');
+            } else {
+                loginFails++;
+                if (loginFails >= 5) { loginLockUntil = Date.now() + 30000; loginFails = 0; showErr('Demasiados intentos. Espera 30 s.'); }
+                else showErr('Usuario o contraseña incorrectos.');
+                document.getElementById('login-pass').value = '';
+            }
+        }
+        function logout() {
+            try { sessionStorage.removeItem('aura_auth'); } catch (x) {}
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            document.getElementById('login-overlay').classList.remove('hidden');
+        }
+
+        // ---- Recetas: crear y eliminar ----
+        function openRecipeModal() {
+            if (!inventory.length) { alert('Primero registra ingredientes en el inventario.'); return; }
+            document.getElementById('recipe-name').value = '';
+            document.getElementById('recipe-desc').value = '';
+            document.getElementById('recipe-rows').innerHTML = '';
+            addRecipeRow();
+            document.getElementById('recipe-modal').classList.remove('hidden');
+        }
+        function closeRecipeModal() {
+            const m = document.getElementById('recipe-modal');
+            if (m) m.classList.add('hidden');
+        }
+        function addRecipeRow() {
+            const row = document.createElement('div');
+            row.className = 'recipe-row flex items-center gap-2';
+            const sel = document.createElement('select');
+            sel.className = 'recipe-ing flex-1 min-w-0 bg-white border border-slate-300 rounded-lg px-2 py-2 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none';
+            inventory.forEach(i => {
+                const o = document.createElement('option');
+                o.value = i.id; o.textContent = `${i.name} (${i.unit})`;
+                sel.appendChild(o);
+            });
+            const inp = document.createElement('input');
+            inp.type = 'number'; inp.min = '0'; inp.step = 'any'; inp.placeholder = 'Cant.';
+            inp.className = 'recipe-amt w-24 bg-white border border-slate-300 rounded-lg px-2 py-2 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none';
+            const del = document.createElement('button');
+            del.type = 'button'; del.textContent = '×';
+            del.className = 'text-slate-400 hover:text-rose-600 font-bold text-lg px-1';
+            del.onclick = () => row.remove();
+            row.append(sel, inp, del);
+            document.getElementById('recipe-rows').appendChild(row);
+        }
+        function saveRecipe() {
+            const name = document.getElementById('recipe-name').value.trim();
+            const description = document.getElementById('recipe-desc').value.trim();
+            if (!name) { alert('Escribe el nombre de la receta.'); return; }
+            if (recipes.some(r => r.name.toLowerCase() === name.toLowerCase())) { alert('Ya existe una receta con ese nombre.'); return; }
+            const items = [], seen = new Set();
+            for (const row of document.querySelectorAll('#recipe-rows .recipe-row')) {
+                const id = row.querySelector('.recipe-ing').value;
+                const amt = parseFloat(row.querySelector('.recipe-amt').value);
+                if (!Number.isFinite(amt) || amt <= 0 || amt > 1e6) { alert('Revisa las cantidades: deben ser mayores a 0.'); return; }
+                if (seen.has(id)) { alert('Hay un ingrediente repetido en la receta.'); return; }
+                seen.add(id); items.push({ ingredientId: id, amountPerUnit: fmt(amt) });
+            }
+            if (!items.length) { alert('Agrega al menos un ingrediente.'); return; }
+            const newId = 'rec_' + (Math.max(0, ...recipes.map(r => parseInt(String(r.id).slice(4)) || 0)) + 1);
+            recipes.push({ id: newId, name, description: description || 'Sin descripción.', ingredients: items });
+            persist(); closeRecipeModal(); refreshAll();
+            document.getElementById('prod-fragrance').value = newId;
+            updateProductionPreview();
+            showToast('Receta creada.');
+        }
+        function deleteRecipe(id) {
+            if (!confirm('¿Eliminar esta receta? El historial de lotes no se modifica.')) return;
+            recipes = recipes.filter(r => r.id !== id);
+            persist(); refreshAll();
+            showToast('Receta eliminada.');
+        }
+
+        // ---- Utilidades de seguridad y datos ----
+        const MAX_QTY = 1000;
+        const LS_KEY = 'aura_perfumes_v2';
+        const DEFAULTS = JSON.stringify({ inventory, recipes, batchHistory });
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fmt = n => Number((+n).toFixed(2));
+        function safeUrl(u) {
+            try {
+                const x = new URL(/^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u);
+                return /^https?:$/.test(x.protocol) ? x.href : '';
+            } catch (e) { return ''; }
+        }
+        function persist() {
+            try { localStorage.setItem(LS_KEY, JSON.stringify({ inventory, recipes, batchHistory })); } catch (e) {}
+        }
+        function loadSaved() {
+            try {
+                const d = JSON.parse(localStorage.getItem(LS_KEY));
+                if (d && Array.isArray(d.inventory) && Array.isArray(d.recipes) && Array.isArray(d.batchHistory)
+                    && d.inventory.every(i => i && typeof i.id === 'string' && typeof i.name === 'string' && Number.isFinite(i.stock))) {
+                    inventory = d.inventory; recipes = d.recipes; batchHistory = d.batchHistory;
+                }
+            } catch (e) {}
+        }
+        function resetData() {
+            if (!confirm('¿Restablecer todos los datos a los de demostración?')) return;
+            try { localStorage.removeItem(LS_KEY); } catch (e) {}
+            const d = JSON.parse(DEFAULTS);
+            inventory = d.inventory; recipes = d.recipes; batchHistory = d.batchHistory;
+            refreshAll();
+            showToast('Datos restablecidos.');
+        }
+        function refreshAll() {
+            renderFragranceDropdown(); updateProductionPreview(); renderInventoryTable();
+            renderRecipesGrid(); renderHistoryTable(); renderRestockDropdown();
+        }
+
+        window.onload = function() {
+            loadSaved();
+            refreshAll();
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') { closeRestockModal(); closeNewIngredientModal(); closeQuotesModal(); closeRecipeModal(); }
+            });
+        };
+
+        // Navigation Controller
+        function switchTab(tabName) {
+            ['production', 'inventory', 'recipes', 'history'].forEach(t => {
+                const sec = document.getElementById('tab-' + t);
+                const btn = document.getElementById('tab-btn-' + t);
+                if (sec) sec.classList.add('hidden');
+                if (btn) {
+                    btn.classList.remove('border-amber-600', 'text-amber-600', 'font-semibold');
+                    btn.classList.add('border-transparent', 'text-slate-500', 'font-medium');
+                }
+            });
+            const activeSec = document.getElementById('tab-' + tabName);
+            const activeBtn = document.getElementById('tab-btn-' + tabName);
+            if (activeSec) activeSec.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.classList.add('border-amber-600', 'text-amber-600', 'font-semibold');
+                activeBtn.classList.remove('border-transparent', 'text-slate-500', 'font-medium');
+            }
+        }
+
+        function renderFragranceDropdown() {
+            const select = document.getElementById('prod-fragrance');
+            if (!select) return;
+            select.innerHTML = '';
+            recipes.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = r.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function adjustQuantity(delta) {
+            const input = document.getElementById('prod-quantity');
+            if (!input) return;
+            let val = parseInt(input.value || 1) + delta;
+            if (!Number.isFinite(val) || val < 1) val = 1;
+            if (val > MAX_QTY) val = MAX_QTY;
+            input.value = val;
+            updateProductionPreview();
+        }
+
+        function updateProductionPreview() {
+            const select = document.getElementById('prod-fragrance');
+            const qtyInput = document.getElementById('prod-quantity');
+            if (!select || !qtyInput) return;
+
+            const recId = select.value;
+            const qty = Math.min(MAX_QTY, Math.max(1, parseInt(qtyInput.value) || 1));
+            const recipe = recipes.find(r => r.id === recId);
+            if (!recipe) {
+                document.getElementById('preview-ingredients-list').innerHTML = '';
+                const b = document.getElementById('btn-execute-batch'); if (b) b.disabled = true;
+                document.getElementById('stock-alert-container').innerHTML = '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs">No hay recetas. Crea una en el Catálogo de Recetas.</div>';
+                return;
+            }
+
+            const badge = document.getElementById('preview-total-badge');
+            if (badge) badge.textContent = `${qty} perfume(s) a producir`;
+
+            const tbody = document.getElementById('preview-ingredients-list');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let hasEnoughStock = true;
+
+            recipe.ingredients.forEach(item => {
+                const ing = inventory.find(i => i.id === item.ingredientId);
+                if (!ing) { hasEnoughStock = false; return; }
+                const totalNeeded = fmt(item.amountPerUnit * qty);
+                const isSufficient = ing.stock >= totalNeeded;
+                if (!isSufficient) hasEnoughStock = false;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-medium text-slate-900">${esc(ing.name)}</td>
+                    <td class="py-3 px-4 text-slate-600">${item.amountPerUnit} ${ing.unit}</td>
+                    <td class="py-3 px-4 font-bold text-slate-900">${totalNeeded} ${ing.unit}</td>
+                    <td class="py-3 px-4 text-slate-600">${ing.stock} ${ing.unit}</td>
+                    <td class="py-3 px-4">
+                        ${isSufficient 
+                            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Stock Suficiente</span>'
+                            : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Falta Stock</span>'
+                        }
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const alertContainer = document.getElementById('stock-alert-container');
+            const btnExecute = document.getElementById('btn-execute-batch');
+
+            if (alertContainer && btnExecute) {
+                if (!hasEnoughStock) {
+                    alertContainer.innerHTML = `
+                        <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs">
+                            Stock insuficiente en uno o más insumos para completar la cantidad deseada.
+                        </div>
+                    `;
+                    btnExecute.disabled = true;
+                    btnExecute.className = "w-full bg-slate-300 text-slate-500 font-semibold py-3 rounded-xl cursor-not-allowed";
+                } else {
+                    alertContainer.innerHTML = `
+                        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs">
+                            Insumos listos. Se descontarán automáticamente al confirmar.
+                        </div>
+                    `;
+                    btnExecute.disabled = false;
+                    btnExecute.className = "w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-amber-600/30 cursor-pointer";
+                }
+            }
+        }
+
+        function executeBatch() {
+            const select = document.getElementById('prod-fragrance');
+            const qtyInput = document.getElementById('prod-quantity');
+            if (!select || !qtyInput) return;
+
+            const recId = select.value;
+            const qty = Math.min(MAX_QTY, Math.max(1, parseInt(qtyInput.value) || 1));
+            const recipe = recipes.find(r => r.id === recId);
+            if (!recipe) return;
+
+            const lacking = recipe.ingredients.some(item => {
+                const i = inventory.find(x => x.id === item.ingredientId);
+                return !i || i.stock < fmt(item.amountPerUnit * qty);
+            });
+            if (lacking) { showToast('Stock insuficiente para producir este lote.'); updateProductionPreview(); return; }
+
+            let summaryParts = [];
+            recipe.ingredients.forEach(item => {
+                const ing = inventory.find(i => i.id === item.ingredientId);
+                if (ing) {
+                    const totalNeeded = fmt(item.amountPerUnit * qty);
+                    ing.stock = fmt(ing.stock - totalNeeded);
+                    summaryParts.push(`${ing.name.split(' ')[0]}: -${totalNeeded}${ing.unit}`);
+                }
+            });
+
+            const newLotId = 'LOT-' + (Math.max(1000, ...batchHistory.map(h => parseInt(String(h.id).slice(4)) || 0)) + 1);
+            const now = new Date();
+            const p = n => String(n).padStart(2, '0');
+            const dateStr = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
+
+            batchHistory.unshift({
+                id: newLotId,
+                date: dateStr,
+                fragranceName: recipe.name,
+                quantity: qty,
+                summary: summaryParts.join(', ')
+            });
+
+            updateProductionPreview();
+            renderInventoryTable();
+            renderHistoryTable();
+
+            persist();
+            showToast(`¡Lote ${newLotId} producido! Inventario actualizado.`);
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventory-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const term = (document.getElementById('inv-search')?.value || '').trim().toLowerCase();
+            const setStat = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            setStat('stat-total', inventory.length);
+            setStat('stat-low', inventory.filter(i => i.stock <= i.minStock).length);
+            setStat('stat-quotes', inventory.reduce((s, i) => s + (i.quotes ? i.quotes.length : 0), 0));
+            const shown = inventory.filter(i => !term || i.name.toLowerCase().includes(term) || String(i.family).toLowerCase().includes(term));
+            if (!shown.length) tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">Sin resultados.</td></tr>';
+            shown.forEach(ing => {
+                let bestPriceText = 'Sin cotizar';
+                if (ing.quotes && ing.quotes.length > 0) {
+                    const minPrice = Math.min(...ing.quotes.map(q => q.price));
+                    bestPriceText = `$${minPrice} MXN (${ing.quotes.length} páginas)`;
+                }
+
+                const isLow = ing.stock <= ing.minStock;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-900">
+                        ${esc(ing.name)}
+                        ${isLow ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Bajo Stock</span>' : ''}
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                            ${esc(ing.family)}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 font-bold text-slate-900">${ing.stock} ${ing.unit}</td>
+                    <td class="py-4 px-6 text-xs text-amber-800 font-bold">${bestPriceText}</td>
+                    <td class="py-4 px-6 text-right space-x-2">
+                        <button onclick="quickAddStock('${ing.id}')" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-3 py-1.5 rounded-lg transition-colors inline-flex items-center space-x-1">
+                            <span>＋ Stock</span>
+                        </button>
+                        <button onclick="openQuotesModal('${ing.id}')" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                            Cotizaciones (${ing.quotes ? ing.quotes.length : 0})
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openRestockModal() {
+            renderRestockDropdown();
+            const modal = document.getElementById('restock-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function quickAddStock(ingId) {
+            renderRestockDropdown();
+            const select = document.getElementById('restock-item-select');
+            if (select) select.value = ingId;
+            const modal = document.getElementById('restock-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeRestockModal() {
+            const modal = document.getElementById('restock-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function renderRestockDropdown() {
+            const select = document.getElementById('restock-item-select');
+            if (!select) return;
+            select.innerHTML = '';
+            inventory.forEach(ing => {
+                const opt = document.createElement('option');
+                opt.value = ing.id;
+                opt.textContent = `${ing.name} (Stock Actual: ${ing.stock} ${ing.unit})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function confirmRestock() {
+            const select = document.getElementById('restock-item-select');
+            const amountInput = document.getElementById('restock-amount');
+            if (!select || !amountInput) return;
+
+            const ingId = select.value;
+            const amount = parseFloat(amountInput.value) || 0;
+            const ing = inventory.find(i => i.id === ingId);
+
+            if (ing && amount > 0 && amount <= 1e7) {
+                ing.stock = fmt(ing.stock + amount);
+                persist();
+                closeRestockModal();
+                renderInventoryTable();
+                updateProductionPreview();
+                renderRestockDropdown();
+                showToast(`Se añadieron +${amount} ${ing.unit} a ${ing.name}.`);
+            }
+        }
+
+        function openNewIngredientModal() {
+            const modal = document.getElementById('new-ingredient-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeNewIngredientModal() {
+            const modal = document.getElementById('new-ingredient-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveNewIngredient() {
+            const name = document.getElementById('new-ing-name').value.trim();
+            const family = document.getElementById('new-ing-family').value;
+            const unit = document.getElementById('new-ing-unit').value;
+            const stock = parseFloat(document.getElementById('new-ing-stock').value) || 0;
+            const minStock = parseFloat(document.getElementById('new-ing-min').value) || 0;
+
+            if (!name) {
+                alert('Escribe el nombre del ingrediente.');
+                return;
+            }
+            if (stock < 0 || minStock < 0 || stock > 1e7 || minStock > 1e7) {
+                alert('El stock debe ser un número válido (0 o mayor).');
+                return;
+            }
+            if (inventory.some(i => i.name.toLowerCase() === name.toLowerCase())) {
+                alert('Ya existe un ingrediente con ese nombre.');
+                return;
+            }
+
+            const newId = 'ing_' + (Math.max(0, ...inventory.map(i => parseInt(String(i.id).slice(4)) || 0)) + 1);
+            inventory.push({
+                id: newId,
+                name: name,
+                family: family,
+                stock: stock,
+                unit: unit,
+                minStock: minStock,
+                quotes: []
+            });
+
+            closeNewIngredientModal();
+            renderInventoryTable();
+            updateProductionPreview();
+            document.getElementById('new-ing-name').value = '';
+            persist();
+            showToast('Nuevo ingrediente registrado.');
+        }
+
+        function openQuotesModal(ingId) {
+            currentActiveIngId = ingId;
+            const ing = inventory.find(i => i.id === ingId);
+            if (!ing) return;
+
+            const title = document.getElementById('quote-modal-title');
+            if (title) title.textContent = `Cotizaciones: ${ing.name}`;
+            renderQuotesList();
+            const modal = document.getElementById('quotes-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeQuotesModal() {
+            const modal = document.getElementById('quotes-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function renderQuotesList() {
+            const ing = inventory.find(i => i.id === currentActiveIngId);
+            const tbody = document.getElementById('quotes-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!ing || !ing.quotes || ing.quotes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-400">No hay páginas registradas para este ingrediente.</td></tr>`;
+                return;
+            }
+
+            const minPrice = Math.min(...ing.quotes.map(q => q.price));
+
+            ing.quotes.forEach(q => {
+                const isCheapest = q.price === minPrice;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-2.5 px-4 font-semibold text-slate-800">${esc(q.site)}</td>
+                    <td class="py-2.5 px-4 font-bold text-slate-900">$${q.price} MXN</td>
+                    <td class="py-2.5 px-4">${safeUrl(q.url) ? `<a href="${esc(safeUrl(q.url))}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">Visitar</a>` : 'N/A'}</td>
+                    <td class="py-2.5 px-4">
+                        ${isCheapest 
+                            ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">¡Más Barata!</span>' 
+                            : '<span class="text-slate-400">Estándar</span>'
+                        }
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addQuoteToCurrentIngredient() {
+            const ing = inventory.find(i => i.id === currentActiveIngId);
+            const siteInput = document.getElementById('quote-site-name');
+            const priceInput = document.getElementById('quote-price');
+            const urlInput = document.getElementById('quote-url');
+
+            if (!ing || !siteInput || !priceInput) return;
+
+            const site = siteInput.value.trim();
+            const price = parseFloat(priceInput.value);
+            let url = urlInput ? urlInput.value.trim() : '';
+            if (url) {
+                url = safeUrl(url);
+                if (!url) { alert('El enlace debe ser una URL http(s) válida.'); return; }
+            }
+
+            if (!site || !Number.isFinite(price) || price <= 0 || price > 1e8) {
+                alert('Escribe el nombre de la página y el precio.');
+                return;
+            }
+
+            if (!ing.quotes) ing.quotes = [];
+            ing.quotes.push({ site: site, price: price, url: url });
+            persist();
+
+            siteInput.value = '';
+            priceInput.value = '';
+            if (urlInput) urlInput.value = '';
+
+            renderQuotesList();
+            renderInventoryTable();
+            showToast('Cotización agregada.');
+        }
+
+        function renderRecipesGrid() {
+            const grid = document.getElementById('recipes-grid');
+            if (!grid) return;
+            grid.innerHTML = recipes.length ? '' : '<p class="text-sm text-slate-400">No hay recetas todavía.</p>';
+            recipes.forEach(r => {
+                let ingredientsListHtml = '';
+                r.ingredients.forEach(i => {
+                    const ing = inventory.find(x => x.id === i.ingredientId);
+                    ingredientsListHtml += `<li class="flex justify-between text-xs py-1.5 border-b border-slate-100"><span class="text-slate-600 font-medium">${esc(ing ? ing.name : 'Insumo')}</span><span class="font-bold text-slate-900">${i.amountPerUnit} ${ing ? ing.unit : ''}</span></li>`;
+                });
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between space-y-4";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start gap-2"><h3 class="font-bold text-slate-900 text-lg">${esc(r.name)}</h3><button onclick="deleteRecipe('${esc(r.id)}')" class="text-xs text-rose-600 hover:text-rose-800 font-semibold shrink-0">Eliminar</button></div>
+                        <p class="text-slate-500 text-sm mt-1">${esc(r.description)}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Ingredientes por cada 1 perfume:</h4>
+                        <ul class="divide-y divide-slate-100 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                            ${ingredientsListHtml}
+                        </ul>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('history-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            batchHistory.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-bold text-slate-900">${esc(h.id)}</td>
+                    <td class="py-4 px-6 text-slate-600">${esc(h.date)}</td>
+                    <td class="py-4 px-6 font-medium text-slate-900">${esc(h.fragranceName)}</td>
+                    <td class="py-4 px-6"><span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full">${esc(h.quantity)} pzs</span></td>
+                    <td class="py-4 px-6 text-xs text-slate-500">${esc(h.summary)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const msgSpan = document.getElementById('toast-message');
+            if (!toast || !msgSpan) return;
+            msgSpan.textContent = msg;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
